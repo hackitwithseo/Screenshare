@@ -176,7 +176,7 @@ class WebHandler(BaseHTTPRequestHandler):
 
 def start_web_server():
     server = HTTPServer(("0.0.0.0", WEB_PORT), WebHandler)
-    print(f"[*] Web interface: http://0.0.0.0:{WEB_PORT}")
+    print(f"[*] Web interface: http://localhost:8080/")
     server.serve_forever()
 
 
