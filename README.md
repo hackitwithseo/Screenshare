@@ -4,3 +4,7 @@
 ### Exzample:
 
 ### C2_HOST = "138.243.177.222"
+
+```bash
+pip install mss pillow
+```
